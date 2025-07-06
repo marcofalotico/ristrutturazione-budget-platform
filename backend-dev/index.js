@@ -15,15 +15,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// ✅ Percorso DB: .env o locale
-const dbPath = process.env.DB_PATH || path.resolve(__dirname, 'ristrutturazione.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Errore connessione DB:', err);
-  } else {
-    console.log(`✅ Connesso a SQLite DB: ${dbPath}`);
-  }
-});
+const db = new sqlite3.Database('./ristrutturazione.db')
 
 // ✅ Rotta di test
 app.get('/', (req, res) => {
