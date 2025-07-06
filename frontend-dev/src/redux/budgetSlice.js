@@ -2,7 +2,7 @@
 import { createSlice } from '@reduxjs/toolkit'
 
 // ✅ Leggi URL backend dall'env Vite
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 // ✅ Stato iniziale
 const initialState = {

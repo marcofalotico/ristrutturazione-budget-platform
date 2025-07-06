@@ -1,26 +1,18 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ignora TUTTI i node_modules
+**/node_modules/
 
-node_modules
-dist
+# ignora dist Vite (React)
+frontend-dev/dist/
+
+# ignora dist-ssr se c’è
 dist-ssr
-*.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# ignora SQLite se NON vuoi versionarlo (opzionale)
+# backend-dev/ristrutturazione.db
+
+# ignora file temporanei
+*.log
+logs
+.vscode/
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-node_modules/
