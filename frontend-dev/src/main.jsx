@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import 'bootstrap/dist/css/bootstrap.min.css'
-import './app.css' // oppure './App.css' se si chiama così
+import './App.css' // oppure './App.css' se si chiama così
 
 
 // 🎯 Importa Redux Provider
