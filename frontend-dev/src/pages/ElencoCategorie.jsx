@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 import { useState } from 'react'
 import { Container, Table, Button } from 'react-bootstrap'
 import ModaleModificaCategoria from '../components/ModaleModificaCategoria'
+import BarraRicerca from '../components/BarraRicerca' // ✅ importa la barra
 
 const ElencoCategorie = () => {
   const categorie = useSelector(state => state.budget.categorie)
@@ -13,16 +14,33 @@ const ElencoCategorie = () => {
   // ✅ Stato per tenere traccia della categoria selezionata da modificare
   const [categoriaSelezionata, setCategoriaSelezionata] = useState(null)
 
+  // ✅ Stato per la barra di ricerca
+  const [filtro, setFiltro] = useState('')
+
   // ✅ Quando clicco su "Modifica", salvo la categoria corrente e apro la modale
   const handleModifica = (categoria) => {
     setCategoriaSelezionata(categoria)
     setShowModale(true)
   }
 
+  // ✅ Filtro le categorie in base a quello che scrivo nella barra di ricerca
+  const categorieFiltrate = categorie.filter((cat) => {
+    const filtroLower = filtro.toLowerCase()
+    return (
+      cat.nome?.toLowerCase().includes(filtroLower) ||
+      cat.macro_area?.toLowerCase().includes(filtroLower) ||
+      cat.note?.toLowerCase().includes(filtroLower)
+    )
+  })
+
   return (
     <Container className="mt-5">
       <h2>Elenco delle Categorie</h2>
-      <Table striped bordered hover>
+
+      {/* ✅ Barra di ricerca come componente */}
+      <BarraRicerca filtro={filtro} setFiltro={setFiltro} />
+
+      <Table striped bordered hover responsive>
         <thead>
           <tr>
             <th>Nome</th>
@@ -34,14 +52,14 @@ const ElencoCategorie = () => {
           </tr>
         </thead>
         <tbody>
-          {categorie.map((cat) => (
+          {categorieFiltrate.map((cat) => (
             <tr key={cat.id}>
-              <td>{cat.nome}</td>
-              <td>{cat.costo_max}</td>
-              <td>{cat.costo_effettivo ?? ''}</td>
-              <td>{cat.macro_area ?? ''}</td>
-              <td>{cat.note ?? ''}</td>
-              <td>
+              <td data-label="Nome">{cat.nome}</td>
+              <td data-label="Preventivo (€)">{cat.costo_max}</td>
+              <td data-label="Effettivo (€)">{cat.costo_effettivo ?? ''}</td>
+              <td data-label="Macro Area">{cat.macro_area ?? ''}</td>
+              <td data-label="Note">{cat.note ?? ''}</td>
+              <td data-label="Azioni">
                 <Button
                   variant="warning"
                   size="sm"
@@ -55,7 +73,7 @@ const ElencoCategorie = () => {
         </tbody>
       </Table>
 
-      {/* ✅ Includiamo la modale e la apriamo solo se una categoria è selezionata */}
+      {/* ✅ Modale visibile solo se c'è una categoria selezionata */}
       {categoriaSelezionata && (
         <ModaleModificaCategoria
           show={showModale}

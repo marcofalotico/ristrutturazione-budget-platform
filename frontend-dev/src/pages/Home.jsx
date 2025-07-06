@@ -1,19 +1,20 @@
+// ✅ Home.jsx
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchCategorieAPI } from '../redux/budgetSlice'
 import { useEffect } from 'react'
 
-// ✅ Import dei componenti Bootstrap usati nella dashboard
+// ✅ Componenti Bootstrap usati nella dashboard
 import { Container, Row, Col, Card, ProgressBar } from 'react-bootstrap'
 
 const Home = () => {
   const dispatch = useDispatch()
 
-  // ✅ Carico le categorie al primo render (fetch da backend)
+  // ✅ Carica categorie da backend quando la pagina monta
   useEffect(() => {
     dispatch(fetchCategorieAPI())
   }, [dispatch])
 
-  // ✅ Leggo i dati globali dal Redux Store
+  // ✅ Leggi i totali dal Redux Store
   const {
     totaleStimato,
     totaleEffettivo,
@@ -22,10 +23,14 @@ const Home = () => {
   } = useSelector((state) => state.budget)
 
   return (
-    <Container className="mt-5">
+    <Container
+      fluid
+      className="d-flex flex-column justify-content-start align-items-center pt-5"
+      style={{ minHeight: 'calc(100vh - 80px)' }} // altezza piena meno navbar
+    >
       <h1 className="text-center mb-4">Dashboard Ristrutturazione</h1>
 
-      <Row className="gy-4">
+      <Row className="gy-4 justify-content-center">
         <Col md={6} lg={3}>
           <Card className="text-center shadow-sm">
             <Card.Body>

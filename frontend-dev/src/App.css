@@ -40,3 +40,39 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Tabella responsive mobile style */
+@media (max-width: 768px) {
+  table {
+    border: 0;
+  }
+
+  table thead {
+    display: none; /* nasconde intestazione */
+  }
+
+  table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.5rem;
+  }
+
+  table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #333;
+  }
+
+  table td:last-child {
+    border-bottom: 0;
+  }
+}

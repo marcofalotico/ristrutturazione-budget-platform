@@ -1,28 +1,31 @@
+// ✅ Import Redux Toolkit
 import { createSlice } from '@reduxjs/toolkit'
 
-// ✅ Stato iniziale vuoto (ora i dati arrivano dal backend)
+// ✅ Leggi URL backend dall'env Vite
+const API_URL = import.meta.env.VITE_API_URL
+
+// ✅ Stato iniziale
 const initialState = {
-  categorie: [],             // Viene popolato da fetchCategorieAPI()
+  categorie: [],
   totaleStimato: 0,
   totaleEffettivo: 0,
   scostamento: 0,
   completamento: 0
 }
 
-// ✅ Slice Redux per il budget
+// ✅ Slice Redux
 const budgetSlice = createSlice({
   name: 'budget',
   initialState,
   reducers: {
-    // ✅ Azione per impostare le categorie ricevute dal backend
     setCategorie: (state, action) => {
       state.categorie = action.payload
-      aggiornaTotali(state) // ogni volta che aggiorni categorie, ricalcoli tutto
+      aggiornaTotali(state)
     }
   }
 })
 
-// ✅ Funzione locale per calcolare i totali
+// ✅ Funzione per calcolare i totali
 function aggiornaTotali(state) {
   state.totaleStimato = state.categorie.reduce((sum, c) => sum + c.costo_max, 0)
   state.totaleEffettivo = state.categorie.reduce((sum, c) => sum + (c.costo_effettivo || 0), 0)
@@ -34,16 +37,16 @@ function aggiornaTotali(state) {
     : 0
 }
 
-// ✅ Async thunk: carica le categorie da backend
+// ✅ Async thunk: carica categorie
 export const fetchCategorieAPI = () => async (dispatch) => {
-  const res = await fetch('http://localhost:3001/api/categorie')
+  const res = await fetch(`${API_URL}/api/categorie`)
   const data = await res.json()
   dispatch(setCategorie(data))
 }
 
-// ✅ Async thunk: aggiunge nuova categoria nel backend
+// ✅ Async thunk: aggiungi categoria
 export const aggiungiCategoriaAPI = (categoria) => async (dispatch) => {
-  await fetch('http://localhost:3001/api/categorie', {
+  await fetch(`${API_URL}/api/categorie`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(categoria)
@@ -51,9 +54,9 @@ export const aggiungiCategoriaAPI = (categoria) => async (dispatch) => {
   dispatch(fetchCategorieAPI())
 }
 
-// ✅ Async thunk: aggiorna il costo effettivo in backend
+// ✅ Async thunk: aggiorna solo costo_effettivo
 export const aggiornaEffettivoAPI = (id, costo_effettivo) => async (dispatch) => {
-  await fetch(`http://localhost:3001/api/categorie/${id}/effettivo`, {
+  await fetch(`${API_URL}/api/categorie/${id}/effettivo`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ costo_effettivo })
@@ -61,36 +64,21 @@ export const aggiornaEffettivoAPI = (id, costo_effettivo) => async (dispatch) =>
   dispatch(fetchCategorieAPI())
 }
 
-// ✅ Aggiorna una categoria esistente (PUT)
+// ✅ Async thunk: modifica intera categoria
 export const modificaCategoriaAPI = (categoria) => async (dispatch) => {
-  await fetch(`http://localhost:3001/api/categorie/${categoria.id}`, {
+  await fetch(`${API_URL}/api/categorie/${categoria.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       nome: categoria.nome,
       costo_max: categoria.costo_max,
       macro_area: categoria.macro_area,
-      note: categoria.note
+      note: categoria.note,
+      costo_effettivo: categoria.costo_effettivo // se lo hai in modale
     })
   })
-  dispatch(fetchCategorieAPI()) // ricarica tutte le categorie
+  dispatch(fetchCategorieAPI())
 }
 
-
-// ✅ Azioni da esportare
 export const { setCategorie } = budgetSlice.actions
 export default budgetSlice.reducer
-
-/* ❌ VERSIONE MOCKATA — sostituita dal backend
-const initialState = {
-  categorie: [
-    { nome: "Opere Edili", stimato: 20000, effettivo: 18000 },
-    { nome: "Pavimenti", stimato: 2500, effettivo: 3000 },
-    { nome: "Arredamento", stimato: 5000, effettivo: 3500 }
-  ],
-  totaleStimato: 27500,
-  totaleEffettivo: 24500,
-  scostamento: -3000,
-  completamento: 89
-}
-*/

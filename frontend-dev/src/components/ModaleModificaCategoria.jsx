@@ -10,17 +10,18 @@ const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
     nome: '',
     costo_max: '',
     macro_area: '',
-    note: ''
+    note: '',
+    costo_effettivo: '' // ✅ nome corretto come nel DB
   });
 
-  // ✅ Quando ricevo la categoria, inizializzo i dati del form
   useEffect(() => {
     if (categoria) {
       setFormData({
         nome: categoria.nome,
         costo_max: categoria.costo_max,
         macro_area: categoria.macro_area,
-        note: categoria.note || ''
+        note: categoria.note || '',
+        costo_effettivo: categoria.costo_effettivo || '' // ✅ inizializza giusto
       });
     }
   }, [categoria]);
@@ -34,7 +35,8 @@ const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
     dispatch(modificaCategoriaAPI({
       id: categoria.id,
       ...formData,
-      costo_max: parseFloat(formData.costo_max)
+      costo_max: parseFloat(formData.costo_max),
+      costo_effettivo: parseFloat(formData.costo_effettivo) // ✅ manda come numero
     }));
     onHide();
   };
@@ -53,8 +55,24 @@ const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Costo Previsto (€)</Form.Label>
-            <Form.Control type="number" name="costo_max" value={formData.costo_max} onChange={handleChange} required />
+            <Form.Label>Preventivo (€)</Form.Label>
+            <Form.Control
+              type="number"
+              name="costo_max"
+              value={formData.costo_max}
+              onChange={handleChange}
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Effettivo (€)</Form.Label>
+            <Form.Control
+              type="number"
+              name="costo_effettivo"
+              value={formData.costo_effettivo}
+              onChange={handleChange}
+            />
           </Form.Group>
 
           <Form.Group className="mb-3">

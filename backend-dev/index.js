@@ -1,75 +1,107 @@
-const express = require('express')
-const cors = require('cors')
-const sqlite3 = require('sqlite3').verbose()
-const path = require('path')
+// ✅ Import dei moduli principali
+require('dotenv').config(); // Carica variabili da .env
+const express = require('express');
+const cors = require('cors');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-const app = express()
-const PORT = 3001
+// ✅ Inizializza app Express
+const app = express();
 
-// Middleware
-app.use(cors())
-app.use(express.json())
+// ✅ Porta dinamica: usa PORT da .env o 3001 in locale
+const PORT = process.env.PORT || 3001;
 
-// Connessione al DB SQLite
-const dbPath = path.resolve(__dirname, 'ristrutturazione.db')
+// ✅ Middleware: CORS + parsing JSON
+app.use(cors());
+app.use(express.json());
+
+// ✅ Connessione al database SQLite (percorsi diversi possibili)
+const dbPath = process.env.DB_PATH || path.resolve(__dirname, 'ristrutturazione.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Errore connessione al database', err)
+    console.error('❌ Errore connessione al database:', err);
   } else {
-    console.log('✅ Connesso a ristrutturazione.db')
+    console.log(`✅ Connesso a SQLite DB: ${dbPath}`);
   }
-})
+});
 
-// Rotta di test
+// ✅ Rotta di test
 app.get('/', (req, res) => {
-  res.send('Backend funzionante ✅')
-})
+  res.send('Backend funzionante ✅');
+});
 
 /* ---------- ROTTE API ---------- */
 
-// ✅ GET tutte le categorie
+// ✅ [GET] Tutte le categorie
 app.get('/api/categorie', (req, res) => {
-  const query = `SELECT * FROM categorie ORDER BY id ASC`
+  const query = `SELECT * FROM categorie ORDER BY id ASC`;
+
   db.all(query, [], (err, rows) => {
     if (err) {
-      res.status(500).json({ error: 'Errore nel recupero categorie' })
+      console.error(err);
+      res.status(500).json({ error: '❌ Errore nel recupero categorie' });
     } else {
-      res.json(rows)
+      res.json(rows);
     }
-  })
-})
+  });
+});
 
-// ✅ POST nuova categoria
+// ✅ [POST] Nuova categoria
 app.post('/api/categorie', (req, res) => {
-  const { nome, costo_max, macro_area, note } = req.body
-  const query = `INSERT INTO categorie (nome, costo_max, macro_area, note) VALUES (?, ?, ?, ?)`
+  const { nome, costo_max, macro_area, note } = req.body;
+
+  const query = `
+    INSERT INTO categorie (nome, costo_max, macro_area, note)
+    VALUES (?, ?, ?, ?)
+  `;
 
   db.run(query, [nome, costo_max, macro_area, note], function (err) {
     if (err) {
-      res.status(500).json({ error: 'Errore nell\'inserimento' })
+      console.error(err);
+      res.status(500).json({ error: '❌ Errore inserimento categoria' });
     } else {
-      res.status(201).json({ id: this.lastID })
+      res.status(201).json({ message: '✅ Categoria inserita', id: this.lastID });
     }
-  })
-})
+  });
+});
 
-// ✅ PUT aggiornamento costo effettivo
-app.put('/api/categorie/:id/effettivo', (req, res) => {
-  const id = req.params.id
-  const { costo_effettivo } = req.body
-  const query = `UPDATE categorie SET costo_effettivo = ? WHERE id = ?`
+// ✅ [PUT] Modifica categoria (tutti i campi)
+app.put('/api/categorie/:id', (req, res) => {
+  const id = req.params.id;
+  const { nome, costo_max, macro_area, note, costo_effettivo } = req.body;
 
-  db.run(query, [costo_effettivo, id], function (err) {
+  const query = `
+    UPDATE categorie
+    SET nome = ?, costo_max = ?, macro_area = ?, note = ?, costo_effettivo = ?
+    WHERE id = ?
+  `;
+
+  db.run(query, [nome, costo_max, macro_area, note, costo_effettivo, id], function (err) {
     if (err) {
-      res.status(500).json({ error: 'Errore aggiornamento effettivo' })
+      console.error(err);
+      res.status(500).json({ error: '❌ Errore aggiornamento categoria' });
     } else {
-      res.json({ message: 'Costo effettivo aggiornato' })
+      res.json({
+        message: '✅ Categoria aggiornata con successo',
+        changes: this.changes
+      });
     }
-  })
-})
+  });
+});
+
+/* ---------- SERVE IL FRONTEND IN PRODUZIONE (opzionale) ---------- */
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+
+  // Catch-all per SPA React Router
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
+}
 
 /* ---------- AVVIO SERVER ---------- */
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server in ascolto su http://localhost:${PORT}`)
-})
+  console.log(`🚀 Server in ascolto sulla porta ${PORT}`);
+});

@@ -1,5 +1,6 @@
 import { useSelector } from 'react-redux'
-import { Container, Row, Col, Card } from 'react-bootstrap'
+import { Container, Row, Col, Card, Modal, Button } from 'react-bootstrap'
+import { useState } from 'react'
 
 import {
   Chart as ChartJS,
@@ -12,13 +13,17 @@ import {
 } from 'chart.js'
 import { Pie, Bar } from 'react-chartjs-2'
 
-// ✅ Registriamo i componenti di Chart.js
+// ✅ Registra i componenti di Chart.js
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const Grafici = () => {
   const categorie = useSelector((state) => state.budget.categorie)
 
-  // ✅ Aggrego costo_max per macro_area (per il grafico a torta)
+  // ✅ Stati per Modals
+  const [showPieModal, setShowPieModal] = useState(false)
+  const [showBarModal, setShowBarModal] = useState(false)
+
+  // ✅ Pie Chart: aggrego costo_max per macro_area
   const macroAreaMap = {}
   categorie.forEach((c) => {
     macroAreaMap[c.macro_area] = (macroAreaMap[c.macro_area] || 0) + c.costo_max
@@ -45,7 +50,7 @@ const Grafici = () => {
     ]
   }
 
-  // ✅ Grafico a barre: confronto costo_max vs costo_effettivo per ogni categoria
+  // ✅ Bar Chart: confronto preventivo vs effettivo
   const barData = {
     labels: categorie.map(c => c.nome),
     datasets: [
@@ -69,6 +74,7 @@ const Grafici = () => {
         position: 'bottom'
       }
     }
+    // ❌ Nessuna scala Y dinamica qui!
   }
 
   return (
@@ -76,20 +82,62 @@ const Grafici = () => {
       <h2 className="text-center mb-4">Analisi Grafica Ristrutturazione</h2>
 
       <Row className="gy-4">
+        {/* ✅ PIE cliccabile */}
         <Col md={6}>
           <Card className="shadow-sm p-3">
             <h5 className="text-center">Distribuzione Preventivi per Macro Area</h5>
-            <Pie data={pieData} />
+            <div style={{ cursor: 'pointer' }} onClick={() => setShowPieModal(true)}>
+              <Pie data={pieData} />
+            </div>
+            <p className="text-center small text-muted mt-2">
+              Clicca sul grafico per ingrandire
+            </p>
           </Card>
         </Col>
 
+        {/* ✅ BAR cliccabile */}
         <Col md={6}>
           <Card className="shadow-sm p-3">
             <h5 className="text-center">Preventivo vs Spesa Effettiva</h5>
-            <Bar data={barData} options={barOptions} />
+            <div style={{ cursor: 'pointer' }} onClick={() => setShowBarModal(true)}>
+              <Bar data={barData} options={barOptions} />
+            </div>
+            <p className="text-center small text-muted mt-2">
+              Clicca sul grafico per ingrandire
+            </p>
           </Card>
         </Col>
       </Row>
+
+      {/* ✅ MODAL PIE */}
+      <Modal show={showPieModal} onHide={() => setShowPieModal(false)} size="xl" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Grafico Torta Ingrandito</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Pie data={pieData} />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowPieModal(false)}>
+            Chiudi
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* ✅ MODAL BAR */}
+      <Modal show={showBarModal} onHide={() => setShowBarModal(false)} size="xl" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Grafico Barre Ingrandito</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Bar data={barData} options={barOptions} />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowBarModal(false)}>
+            Chiudi
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   )
 }
