@@ -1,25 +1,25 @@
-// ✅ Import dei moduli principali
-require('dotenv').config(); // Carica variabili da .env
+// ✅ Import moduli principali
+require('dotenv').config(); // Legge variabili da .env
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// ✅ Inizializza app Express
+// ✅ Inizializza Express
 const app = express();
 
-// ✅ Porta dinamica: usa PORT da .env o 3001 in locale
+// ✅ Porta: .env o fallback 3001
 const PORT = process.env.PORT || 3001;
 
-// ✅ Middleware: CORS + parsing JSON
+// ✅ Middleware CORS + JSON parser
 app.use(cors());
 app.use(express.json());
 
-// ✅ Connessione al database SQLite (percorsi diversi possibili)
+// ✅ Percorso DB: .env o locale
 const dbPath = process.env.DB_PATH || path.resolve(__dirname, 'ristrutturazione.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('❌ Errore connessione al database:', err);
+    console.error('❌ Errore connessione DB:', err);
   } else {
     console.log(`✅ Connesso a SQLite DB: ${dbPath}`);
   }
@@ -27,10 +27,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // ✅ Rotta di test
 app.get('/', (req, res) => {
-  res.send('Backend funzionante ✅');
+  res.send('✅ Backend funzionante!');
 });
 
-/* ---------- ROTTE API ---------- */
+/* ----------------- API ----------------- */
 
 // ✅ [GET] Tutte le categorie
 app.get('/api/categorie', (req, res) => {
@@ -39,7 +39,7 @@ app.get('/api/categorie', (req, res) => {
   db.all(query, [], (err, rows) => {
     if (err) {
       console.error(err);
-      res.status(500).json({ error: '❌ Errore nel recupero categorie' });
+      res.status(500).json({ error: '❌ Errore recupero categorie' });
     } else {
       res.json(rows);
     }
@@ -65,7 +65,7 @@ app.post('/api/categorie', (req, res) => {
   });
 });
 
-// ✅ [PUT] Modifica categoria (tutti i campi)
+// ✅ [PUT] Modifica categoria completa
 app.put('/api/categorie/:id', (req, res) => {
   const id = req.params.id;
   const { nome, costo_max, macro_area, note, costo_effettivo } = req.body;
@@ -89,19 +89,10 @@ app.put('/api/categorie/:id', (req, res) => {
   });
 });
 
-/* ---------- SERVE IL FRONTEND IN PRODUZIONE (opzionale) ---------- */
+/* ----------------- ⚠️ Niente serve static ⚠️ ----------------- */
+// Non serve Express static: frontend deploy separato con Vite!
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-
-  // Catch-all per SPA React Router
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
-
-/* ---------- AVVIO SERVER ---------- */
-
+/* ----------------- Avvio ----------------- */
 app.listen(PORT, () => {
-  console.log(`🚀 Server in ascolto sulla porta ${PORT}`);
+  console.log(`🚀 Server backend attivo su http://localhost:${PORT}`);
 });
