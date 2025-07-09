@@ -14,6 +14,7 @@ const MyNavbar = () => {
             <Nav.Link as={Link} to="/inserisci">Inserisci Preventivo</Nav.Link>
             <Nav.Link as={Link} to="/spesa">Inserisci Spesa</Nav.Link>
             <Nav.Link as={Link} to="/grafici">Grafici</Nav.Link>
+            <Link to="/login">Login</Link> {/* ✅ Link Login */}
 
           </Nav>
         </Navbar.Collapse>

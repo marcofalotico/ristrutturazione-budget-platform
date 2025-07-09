@@ -7,6 +7,7 @@ import InserisciSpesa from './pages/InserisciSpesa'
 import MyNavbar from './components/Navbar'
 import Grafici from './pages/Grafici'
 import ElencoCategorie from './pages/ElencoCategorie'
+import Login from './components/Login';
 
 
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/spesa" element={<InserisciSpesa />} />
         <Route path="/grafici" element={<Grafici />} />
         <Route path="/elenco" element={<ElencoCategorie />} />
+        <Route path="/login" element={<Login />} />
 
       </Routes>
     </BrowserRouter>
