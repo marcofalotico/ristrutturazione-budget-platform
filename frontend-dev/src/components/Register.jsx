@@ -12,38 +12,47 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setMessage('');
 
-    // ✅ 1) Verifica se l'utente esiste già (workaround al bug supabase)
-    const { data: existingUser, error: userError } = await supabase
-      .from('auth.users') // Attenzione: 'auth.users' funziona solo con RLS e policy corretta
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    // ✅ Se c'è un errore "normale" diverso da "no rows found"
-    if (userError && userError.code !== 'PGRST116') {
-      setMessage('Errore nel controllo utente: ' + userError.message);
-      return;
-    }
-
-    // ✅ Se l'utente esiste già, avviso e stop
-    if (existingUser) {
-      setMessage('Hai già un account con questa email. Effettua il login.');
-      return;
-    }
-
-    // ✅ Altrimenti procedi con signup
-    const { data, error } = await supabase.auth.signUp({
+    // ✅ Prova a fare signUp normalmente
+    const response = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
     });
 
-    if (error) {
-      setMessage('Errore durante la registrazione: ' + error.message);
+    console.log('Sign-up response:', response);
+
+    // ✅ Se c'è un utente creato
+    if (response.data && response.data.user) {
+      console.log('Identities:', response.data.user.identities);
+
+      if (response.data.user.identities && response.data.user.identities.length > 0) {
+        // ✅ Utente nuovo → registrazione OK
+        setMessage('Registrazione completata! Controlla la tua email per confermare.');
+      } else {
+        // ✅ Utente esiste già → faccio login automatico
+        setMessage('Email già registrata. Provo accesso automatico...');
+
+        const signInResponse = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInResponse.error) {
+          console.error('Errore login:', signInResponse.error.message);
+          setMessage('Email già registrata. Password errata o account già esistente.');
+        } else {
+          console.log('Login automatico OK');
+          setMessage('Accesso effettuato con successo!');
+          navigate('/'); // ✅ Vai alla homepage o dove vuoi
+        }
+      }
     } else {
-      setMessage('Registrazione completata! Controlla la tua email per confermare.');
-      // navigate('/login'); // se vuoi reindirizzare subito
+      // ✅ Se signup fallisce per altri motivi
+      console.error('Errore signUp:', response.error?.message);
+      setMessage('Errore: ' + response.error?.message);
     }
   };
 
@@ -53,11 +62,12 @@ export default function Register() {
         <Col>
           <Card className="shadow p-4">
             <h2 className="mb-4 text-center">Registrati</h2>
-
             {message && (
               <Alert
                 variant={
-                  message.includes('Registrazione') ? 'success' : 'danger'
+                  message.includes('Errore') || message.includes('errata')
+                    ? 'danger'
+                    : 'success'
                 }
               >
                 {message}
