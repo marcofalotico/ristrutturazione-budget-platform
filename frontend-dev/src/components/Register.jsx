@@ -1,4 +1,4 @@
-// src/components/Register.jsx
+// ✅ src/components/Register.jsx
 import { useState } from 'react';
 import { supabase } from '../SupabaseClient';
 import { useNavigate } from 'react-router-dom';
@@ -12,19 +12,38 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setMessage('');
 
-    const { error } = await supabase.auth.signUp({
+    // ✅ 1) Verifica se l'utente esiste già (workaround al bug supabase)
+    const { data: existingUser, error: userError } = await supabase
+      .from('auth.users') // Attenzione: 'auth.users' funziona solo con RLS e policy corretta
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    // ✅ Se c'è un errore "normale" diverso da "no rows found"
+    if (userError && userError.code !== 'PGRST116') {
+      setMessage('Errore nel controllo utente: ' + userError.message);
+      return;
+    }
+
+    // ✅ Se l'utente esiste già, avviso e stop
+    if (existingUser) {
+      setMessage('Hai già un account con questa email. Effettua il login.');
+      return;
+    }
+
+    // ✅ Altrimenti procedi con signup
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
-    
 
     if (error) {
-      setMessage(error.message);
+      setMessage('Errore durante la registrazione: ' + error.message);
     } else {
       setMessage('Registrazione completata! Controlla la tua email per confermare.');
-      // ✅ Puoi decidere di reindirizzare subito:
-      // navigate('/login');
+      // navigate('/login'); // se vuoi reindirizzare subito
     }
   };
 
@@ -34,7 +53,16 @@ export default function Register() {
         <Col>
           <Card className="shadow p-4">
             <h2 className="mb-4 text-center">Registrati</h2>
-            {message && <Alert variant={message.includes('Registrazione') ? 'success' : 'danger'}>{message}</Alert>}
+
+            {message && (
+              <Alert
+                variant={
+                  message.includes('Registrazione') ? 'success' : 'danger'
+                }
+              >
+                {message}
+              </Alert>
+            )}
 
             <Form onSubmit={handleRegister}>
               <Form.Group className="mb-3">
@@ -67,7 +95,9 @@ export default function Register() {
             </Form>
 
             <div className="text-center mt-3">
-              <small>Hai già un account? <a href="/login">Accedi</a></small>
+              <small>
+                Hai già un account? <a href="/login">Accedi</a>
+              </small>
             </div>
           </Card>
         </Col>
