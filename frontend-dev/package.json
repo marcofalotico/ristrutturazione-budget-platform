@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
+    "@supabase/supabase-js": "^2.50.4",
     "bootstrap": "^5.3.6",
     "chart.js": "^4.5.0",
     "chartjs-plugin-zoom": "^2.2.0",
