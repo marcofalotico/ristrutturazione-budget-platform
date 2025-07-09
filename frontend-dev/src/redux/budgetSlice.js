@@ -1,8 +1,6 @@
-// ✅ Import Redux Toolkit
-import { createSlice } from '@reduxjs/toolkit'
-
-// ✅ Leggi URL backend dall'env Vite
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// ✅ Import base Redux Toolkit + Supabase client
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { supabase } from '../SupabaseClient'
 
 // ✅ Stato iniziale
 const initialState = {
@@ -13,72 +11,95 @@ const initialState = {
   completamento: 0
 }
 
-// ✅ Slice Redux
+/* ----------------- Async Thunks ----------------- */
+
+// ✅ [GET] Tutte le categorie (solo utente loggato)
+export const fetchCategorieAPI = createAsyncThunk(
+  'budget/fetchCategorieAPI',
+  async (_, thunkAPI) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Utente non autenticato')
+
+    const { data, error } = await supabase
+      .from('categorie')
+      .select('*')
+      .eq('user_id', user.id)
+
+    if (error) throw error
+    return data
+  }
+)
+
+// ✅ [POST] Aggiungi categoria
+export const aggiungiCategoriaAPI = createAsyncThunk(
+  'budget/aggiungiCategoriaAPI',
+  async (categoria, thunkAPI) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Utente non autenticato')
+
+    const { data, error } = await supabase
+      .from('categorie')
+      .insert([{ ...categoria, user_id: user.id }])
+      .select()
+
+    if (error) throw error
+    return data[0] // Torna la riga inserita
+  }
+)
+
+// ✅ [PUT] Modifica categoria completa
+export const modificaCategoriaAPI = createAsyncThunk(
+  'budget/modificaCategoriaAPI',
+  async (categoria, thunkAPI) => {
+    const { id, ...fields } = categoria
+
+    const { data, error } = await supabase
+      .from('categorie')
+      .update(fields)
+      .eq('id', id)
+      .select('*')
+
+    if (error) throw error
+    return data[0] // Torna la riga aggiornata
+  }
+)
+
+/* ----------------- Slice Redux ----------------- */
+
 const budgetSlice = createSlice({
   name: 'budget',
   initialState,
-  reducers: {
-    setCategorie: (state, action) => {
-      state.categorie = action.payload
-      aggiornaTotali(state)
-    }
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCategorieAPI.fulfilled, (state, action) => {
+        state.categorie = action.payload
+        aggiornaTotali(state)
+      })
+      .addCase(aggiungiCategoriaAPI.fulfilled, (state, action) => {
+        state.categorie.push(action.payload)
+        aggiornaTotali(state)
+      })
+      .addCase(modificaCategoriaAPI.fulfilled, (state, action) => {
+        const index = state.categorie.findIndex(c => c.id === action.payload.id)
+        if (index !== -1) {
+          state.categorie[index] = action.payload
+        }
+        aggiornaTotali(state)
+      })
   }
 })
 
-// ✅ Funzione per calcolare i totali
+// ✅ Funzione per aggiornare i totali globali
 function aggiornaTotali(state) {
   state.totaleStimato = state.categorie.reduce((sum, c) => sum + c.costo_max, 0)
   state.totaleEffettivo = state.categorie.reduce((sum, c) => sum + (c.costo_effettivo || 0), 0)
   state.scostamento = state.totaleEffettivo - state.totaleStimato
 
-  const completate = state.categorie.filter(c => c.costo_effettivo !== null).length
+  const completate = state.categorie.filter(c => c.costo_effettivo !== null && c.costo_effettivo !== undefined).length
   state.completamento = state.categorie.length > 0
     ? Math.round((completate / state.categorie.length) * 100)
     : 0
 }
 
-// ✅ Async thunk: carica categorie
-export const fetchCategorieAPI = () => async (dispatch) => {
-  const res = await fetch(`${API_URL}/api/categorie`)
-  const data = await res.json()
-  dispatch(setCategorie(data))
-}
-
-// ✅ Async thunk: aggiungi categoria
-export const aggiungiCategoriaAPI = (categoria) => async (dispatch) => {
-  await fetch(`${API_URL}/api/categorie`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(categoria)
-  })
-  dispatch(fetchCategorieAPI())
-}
-
-// ✅ Async thunk: aggiorna solo costo_effettivo
-export const aggiornaEffettivoAPI = (id, costo_effettivo) => async (dispatch) => {
-  await fetch(`${API_URL}/api/categorie/${id}/effettivo`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ costo_effettivo })
-  })
-  dispatch(fetchCategorieAPI())
-}
-
-// ✅ Async thunk: modifica intera categoria
-export const modificaCategoriaAPI = (categoria) => async (dispatch) => {
-  await fetch(`${API_URL}/api/categorie/${categoria.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      nome: categoria.nome,
-      costo_max: categoria.costo_max,
-      macro_area: categoria.macro_area,
-      note: categoria.note,
-      costo_effettivo: categoria.costo_effettivo // se lo hai in modale
-    })
-  })
-  dispatch(fetchCategorieAPI())
-}
-
-export const { setCategorie } = budgetSlice.actions
 export default budgetSlice.reducer

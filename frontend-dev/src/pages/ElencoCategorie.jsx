@@ -1,43 +1,81 @@
-// ✅ ElencoCategorie.jsx
-import { useSelector } from 'react-redux'
-import { useState } from 'react'
-import { Container, Table, Button } from 'react-bootstrap'
-import ModaleModificaCategoria from '../components/ModaleModificaCategoria'
-import BarraRicerca from '../components/BarraRicerca' // ✅ importa la barra
+// ✅ src/pages/ElencoCategorie.jsx
+import { useEffect, useState } from 'react';
+import { supabase } from '../SupabaseClient'; // 👈 importa il client
+import { Container, Table, Button, Spinner } from 'react-bootstrap';
+import ModaleModificaCategoria from '../components/ModaleModificaCategoria';
+import BarraRicerca from '../components/BarraRicerca';
 
 const ElencoCategorie = () => {
-  const categorie = useSelector(state => state.budget.categorie)
+  // ✅ Stato: categorie caricate da Supabase
+  const [categorie, setCategorie] = useState([]);
 
-  // ✅ Stato per aprire la modale
-  const [showModale, setShowModale] = useState(false)
+  // ✅ Stato: caricamento
+  const [loading, setLoading] = useState(true);
 
-  // ✅ Stato per tenere traccia della categoria selezionata da modificare
-  const [categoriaSelezionata, setCategoriaSelezionata] = useState(null)
+  // ✅ Stato: errori
+  const [error, setError] = useState('');
 
-  // ✅ Stato per la barra di ricerca
-  const [filtro, setFiltro] = useState('')
+  // ✅ Stato: modale di modifica
+  const [showModale, setShowModale] = useState(false);
+  const [categoriaSelezionata, setCategoriaSelezionata] = useState(null);
 
-  // ✅ Quando clicco su "Modifica", salvo la categoria corrente e apro la modale
-  const handleModifica = (categoria) => {
-    setCategoriaSelezionata(categoria)
-    setShowModale(true)
+  // ✅ Stato: barra di ricerca
+  const [filtro, setFiltro] = useState('');
+
+  // ✅ Carica le categorie all'avvio
+  useEffect(() => {
+    const fetchCategorie = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('categorie')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        setError('Errore nel caricamento categorie');
+      } else {
+        setCategorie(data);
+      }
+      setLoading(false);
+    };
+
+    fetchCategorie();
+  }, []);
+
+  // ✅ Mostra spinner se carica
+  if (loading) {
+    return (
+      <Container className="mt-5 text-center">
+        <Spinner animation="border" variant="primary" />
+        <p>Caricamento categorie...</p>
+      </Container>
+    );
   }
 
-  // ✅ Filtro le categorie in base a quello che scrivo nella barra di ricerca
+  // ✅ Filtro
   const categorieFiltrate = categorie.filter((cat) => {
-    const filtroLower = filtro.toLowerCase()
+    const filtroLower = filtro.toLowerCase();
     return (
       cat.nome?.toLowerCase().includes(filtroLower) ||
       cat.macro_area?.toLowerCase().includes(filtroLower) ||
       cat.note?.toLowerCase().includes(filtroLower)
-    )
-  })
+    );
+  });
+
+  // ✅ Quando clicco Modifica
+  const handleModifica = (categoria) => {
+    setCategoriaSelezionata(categoria);
+    setShowModale(true);
+  };
 
   return (
     <Container className="mt-5">
       <h2>Elenco delle Categorie</h2>
 
-      {/* ✅ Barra di ricerca come componente */}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      {/* Barra di ricerca */}
       <BarraRicerca filtro={filtro} setFiltro={setFiltro} />
 
       <Table striped bordered hover responsive>
@@ -54,11 +92,21 @@ const ElencoCategorie = () => {
         <tbody>
           {categorieFiltrate.map((cat) => (
             <tr key={cat.id}>
-              <td data-label="Nome">{cat.nome}</td>
-              <td data-label="Preventivo (€)">{cat.costo_max}</td>
-              <td data-label="Effettivo (€)">{cat.costo_effettivo ?? ''}</td>
-              <td data-label="Macro Area">{cat.macro_area ?? ''}</td>
-              <td data-label="Note">{cat.note ?? ''}</td>
+              <td data-label="Nome">
+                {cat.nome}
+              </td>
+              <td data-label="Preventivo (€)">
+                {cat.costo_max ?? 'N/D'}
+              </td>
+              <td data-label="Effettivo (€)">
+                {cat.costo_effettivo ?? '0'}
+              </td>
+              <td data-label="Macro Area">
+                {cat.macro_area ?? 'N/D'}
+              </td>
+              <td data-label="Note">
+                {cat.note ?? 'N/D'}
+              </td>
               <td data-label="Azioni">
                 <Button
                   variant="warning"
@@ -71,9 +119,10 @@ const ElencoCategorie = () => {
             </tr>
           ))}
         </tbody>
+
       </Table>
 
-      {/* ✅ Modale visibile solo se c'è una categoria selezionata */}
+      {/* Modale */}
       {categoriaSelezionata && (
         <ModaleModificaCategoria
           show={showModale}
@@ -82,7 +131,7 @@ const ElencoCategorie = () => {
         />
       )}
     </Container>
-  )
-}
+  );
+};
 
-export default ElencoCategorie
+export default ElencoCategorie;

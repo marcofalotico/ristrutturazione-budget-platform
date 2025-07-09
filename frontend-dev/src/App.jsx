@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Home from './pages/Home';
-import InserisciCategoria from './pages/InserisciCategoria';
+import InserisciPreventivo from './pages/InserisciPreventivo';
 import InserisciSpesa from './pages/InserisciSpesa';
 import Grafici from './pages/Grafici';
 import ElencoCategorie from './pages/ElencoCategorie';
@@ -37,7 +37,7 @@ function App() {
           path="/inserisci"
           element={
             <PrivateRoute>
-              <InserisciCategoria />
+              <InserisciPreventivo />
             </PrivateRoute>
           }
         />

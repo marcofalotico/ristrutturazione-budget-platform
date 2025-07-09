@@ -2,10 +2,10 @@ import { useDispatch } from 'react-redux'
 import { useState } from 'react'
 import { Container, Form, Button, Alert } from 'react-bootstrap'
 
-// ✅ Nuova funzione API-based (non più azione locale)
+// ✅ Usa l'azione Supabase!
 import { aggiungiCategoriaAPI } from '../redux/budgetSlice'
 
-const InserisciCategoria = () => {
+const InserisciPreventivo = () => {
   const dispatch = useDispatch()
 
   // Stato del form
@@ -16,7 +16,7 @@ const InserisciCategoria = () => {
     note: ''
   })
 
-  // ✅ Stato per mostrare messaggio conferma
+  // Stato conferma
   const [successo, setSuccesso] = useState(false)
 
   const handleChange = (e) => {
@@ -26,26 +26,17 @@ const InserisciCategoria = () => {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // ✅ VERSIONE BACKEND (POST su SQLite)
-    dispatch(aggiungiCategoriaAPI({
-      nome: formData.nome,
-      costo_max: parseFloat(formData.stimato),
-      macro_area: formData.macroArea,
-      note: formData.note
-    }))
+    // ✅ Chiamata reale Supabase tramite Redux Thunk
+    dispatch(
+      aggiungiCategoriaAPI({
+        nome: formData.nome,
+        costo_max: parseFloat(formData.stimato),
+        macro_area: formData.macroArea,
+        note: formData.note
+      })
+    )
 
-    // ✅ VERSIONE MOCK (solo Redux locale) — ora commentata
-    /*
-    dispatch(addCategoria({
-      nome: formData.nome,
-      stimato: parseFloat(formData.stimato),
-      effettivo: null,
-      macroArea: formData.macroArea,
-      note: formData.note
-    }))
-    */
-
-    // Reset form + mostra conferma
+    // Reset + messaggio
     setFormData({ nome: '', stimato: '', macroArea: '', note: '' })
     setSuccesso(true)
     setTimeout(() => setSuccesso(false), 3000)
@@ -53,9 +44,8 @@ const InserisciCategoria = () => {
 
   return (
     <Container className="mt-5">
-      <h2>Inserisci Nuova Categoria</h2>
+      <h2>Inserisci Preventivo</h2>
 
-      {/* ✅ Messaggio conferma */}
       {successo && (
         <Alert variant="success" className="text-center">
           ✅ Preventivo aggiunto con successo!
@@ -64,7 +54,7 @@ const InserisciCategoria = () => {
 
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
-          <Form.Label>Nome Categoria</Form.Label>
+          <Form.Label>Nome</Form.Label>
           <Form.Control
             name="nome"
             value={formData.nome}
@@ -103,10 +93,12 @@ const InserisciCategoria = () => {
           />
         </Form.Group>
 
-        <Button type="submit">Aggiungi Categoria</Button>
+        <Button type="submit" variant="success">
+          Aggiungi Categoria
+        </Button>
       </Form>
     </Container>
   )
 }
 
-export default InserisciCategoria
+export default InserisciPreventivo

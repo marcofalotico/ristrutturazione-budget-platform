@@ -1,6 +1,9 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { useState } from 'react'
-import { aggiornaEffettivoAPI } from '../redux/budgetSlice'
+
+// ✅ IMPORT CORRETTO!
+import { modificaCategoriaAPI } from '../redux/budgetSlice'
+
 import { Container, Form, Button, Alert } from 'react-bootstrap'
 import Select from 'react-select'
 
@@ -12,7 +15,7 @@ const InserisciSpesa = () => {
   const [successo, setSuccesso] = useState(false)
 
   // Filtra categorie non completate
-  const nonCompletate = categorie.filter(c => c.costo_effettivo === null)
+  const nonCompletate = categorie.filter(c => !c.costo_effettivo)
 
   // Costruisci le options per react-select
   const options = nonCompletate.map(c => ({
@@ -25,11 +28,12 @@ const InserisciSpesa = () => {
 
     if (!formData.categoria || !formData.effettivo) return
 
+    // ✅ Usa modificaCategoriaAPI per aggiornare SOLO costo_effettivo
     dispatch(
-      aggiornaEffettivoAPI(
-        parseInt(formData.categoria),
-        parseFloat(formData.effettivo)
-      )
+      modificaCategoriaAPI({
+        id: parseInt(formData.categoria),
+        costo_effettivo: parseFloat(formData.effettivo)
+      })
     )
 
     setFormData({ categoria: '', effettivo: '' })
