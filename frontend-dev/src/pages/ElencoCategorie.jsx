@@ -1,49 +1,76 @@
-// ✅ src/pages/ElencoCategorie.jsx
 import { useEffect, useState } from 'react';
-import { supabase } from '../SupabaseClient'; // 👈 importa il client
-import { Container, Table, Button, Spinner } from 'react-bootstrap';
+import { supabase } from '../SupabaseClient';
+import { Container, Table, Button, Spinner, Alert } from 'react-bootstrap';
 import ModaleModificaCategoria from '../components/ModaleModificaCategoria';
 import BarraRicerca from '../components/BarraRicerca';
 
 const ElencoCategorie = () => {
-  // ✅ Stato: categorie caricate da Supabase
   const [categorie, setCategorie] = useState([]);
-
-  // ✅ Stato: caricamento
   const [loading, setLoading] = useState(true);
-
-  // ✅ Stato: errori
   const [error, setError] = useState('');
-
-  // ✅ Stato: modale di modifica
   const [showModale, setShowModale] = useState(false);
   const [categoriaSelezionata, setCategoriaSelezionata] = useState(null);
-
-  // ✅ Stato: barra di ricerca
   const [filtro, setFiltro] = useState('');
 
-  // ✅ Carica le categorie all'avvio
+  // ✅ Stato per messaggi di successo
+  const [messaggioSuccesso, setMessaggioSuccesso] = useState('');
+
+  // ✅ Carica categorie da Supabase
+  const fetchCategorie = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('categorie')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      setError('Errore nel caricamento categorie');
+    } else {
+      setCategorie(data);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchCategorie = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('categorie')
-        .select('*')
-        .order('id', { ascending: true });
-
-      if (error) {
-        console.error(error);
-        setError('Errore nel caricamento categorie');
-      } else {
-        setCategorie(data);
-      }
-      setLoading(false);
-    };
-
     fetchCategorie();
   }, []);
 
-  // ✅ Mostra spinner se carica
+  // ✅ Elimina categoria da Supabase
+  const handleElimina = async (id) => {
+    const conferma = window.confirm("Sei sicuro di voler eliminare questa categoria?");
+    if (!conferma) return;
+
+    const { error } = await supabase
+      .from('categorie')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Errore durante eliminazione:', error);
+      alert('Errore durante l\'eliminazione');
+    } else {
+      setCategorie(prev => prev.filter(cat => cat.id !== id));
+      setMessaggioSuccesso('✅ Categoria eliminata con successo!');
+      setTimeout(() => setMessaggioSuccesso(''), 3000);
+    }
+  };
+
+  // ✅ Salva modifica categoria e aggiorna riga corrispondente
+  const handleSalvaModifica = (categoriaModificata) => {
+    setCategorie(prev =>
+      prev.map(cat => (cat.id === categoriaModificata.id ? categoriaModificata : cat))
+    );
+    setMessaggioSuccesso('✅ Modifica avvenuta con successo!');
+    setTimeout(() => setMessaggioSuccesso(''), 3000);
+    setShowModale(false);
+  };
+
+  const handleModifica = (categoria) => {
+    setCategoriaSelezionata(categoria);
+    setShowModale(true);
+  };
+
   if (loading) {
     return (
       <Container className="mt-5 text-center">
@@ -53,7 +80,6 @@ const ElencoCategorie = () => {
     );
   }
 
-  // ✅ Filtro
   const categorieFiltrate = categorie.filter((cat) => {
     const filtroLower = filtro.toLowerCase();
     return (
@@ -63,19 +89,17 @@ const ElencoCategorie = () => {
     );
   });
 
-  // ✅ Quando clicco Modifica
-  const handleModifica = (categoria) => {
-    setCategoriaSelezionata(categoria);
-    setShowModale(true);
-  };
-
   return (
     <Container className="mt-5">
       <h2>Elenco delle Categorie</h2>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {/* ✅ Messaggio di successo */}
+      {messaggioSuccesso && <Alert variant="success">{messaggioSuccesso}</Alert>}
 
-      {/* Barra di ricerca */}
+      {/* ✅ Messaggio di errore */}
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      {/* ✅ Barra ricerca */}
       <BarraRicerca filtro={filtro} setFiltro={setFiltro} />
 
       <Table striped bordered hover responsive>
@@ -92,42 +116,40 @@ const ElencoCategorie = () => {
         <tbody>
           {categorieFiltrate.map((cat) => (
             <tr key={cat.id}>
-              <td data-label="Nome">
-                {cat.nome}
-              </td>
-              <td data-label="Preventivo (€)">
-                {cat.costo_max ?? 'N/D'}
-              </td>
-              <td data-label="Effettivo (€)">
-                {cat.costo_effettivo ?? '0'}
-              </td>
-              <td data-label="Macro Area">
-                {cat.macro_area ?? 'N/D'}
-              </td>
-              <td data-label="Note">
-                {cat.note ?? 'N/D'}
-              </td>
-              <td data-label="Azioni">
+              <td>{cat.nome}</td>
+              <td>{cat.costo_max ?? 'N/D'}</td>
+              <td>{cat.costo_effettivo ?? '0'}</td>
+              <td>{cat.macro_area ?? 'N/D'}</td>
+              <td>{cat.note ?? 'N/D'}</td>
+              <td>
                 <Button
                   variant="warning"
                   size="sm"
+                  className="me-2"
                   onClick={() => handleModifica(cat)}
                 >
                   Modifica
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleElimina(cat.id)}
+                >
+                  Elimina
                 </Button>
               </td>
             </tr>
           ))}
         </tbody>
-
       </Table>
 
-      {/* Modale */}
+      {/* ✅ Modale visibile solo se categoria selezionata */}
       {categoriaSelezionata && (
         <ModaleModificaCategoria
           show={showModale}
           onHide={() => setShowModale(false)}
           categoria={categoriaSelezionata}
+          onSalva={handleSalvaModifica} // ✅ callback che aggiorna la lista
         />
       )}
     </Container>

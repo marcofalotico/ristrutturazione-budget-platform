@@ -4,14 +4,14 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import { useDispatch } from 'react-redux';
 import { modificaCategoriaAPI } from '../redux/budgetSlice';
 
-const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
+const ModaleModificaCategoria = ({ show, onHide, categoria, onSalva }) => {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     nome: '',
     costo_max: '',
     macro_area: '',
     note: '',
-    costo_effettivo: '' // ✅ nome corretto come nel DB
+    costo_effettivo: ''
   });
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
         costo_max: categoria.costo_max,
         macro_area: categoria.macro_area,
         note: categoria.note || '',
-        costo_effettivo: categoria.costo_effettivo || '' // ✅ inizializza giusto
+        costo_effettivo: categoria.costo_effettivo || ''
       });
     }
   }, [categoria]);
@@ -30,15 +30,21 @@ const ModaleModificaCategoria = ({ show, onHide, categoria }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(modificaCategoriaAPI({
+
+    // ✅ Chiama Redux thunk e aspetta risultato
+    const res = await dispatch(modificaCategoriaAPI({
       id: categoria.id,
       ...formData,
       costo_max: parseFloat(formData.costo_max),
-      costo_effettivo: parseFloat(formData.costo_effettivo) // ✅ manda come numero
+      costo_effettivo: parseFloat(formData.costo_effettivo)
     }));
-    onHide();
+
+    // ✅ Se è andata a buon fine, richiama callback
+    if (res.meta.requestStatus === 'fulfilled') {
+      onSalva(res.payload); // <-- aggiorna lista e chiude modale
+    }
   };
 
   return (

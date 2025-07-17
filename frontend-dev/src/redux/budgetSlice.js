@@ -1,3 +1,5 @@
+
+
 // ✅ Import base Redux Toolkit + Supabase client
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../SupabaseClient'
@@ -64,6 +66,22 @@ export const modificaCategoriaAPI = createAsyncThunk(
   }
 )
 
+// ✅ [DELETE] Elimina categoria per ID
+export const eliminaCategoriaAPI = createAsyncThunk(
+  'budget/eliminaCategoriaAPI',
+  async (categoriaId, thunkAPI) => {
+    const { error } = await supabase
+      .from('categorie')
+      .delete()
+      .eq('id', categoriaId);
+
+    if (error) throw error;
+
+    return categoriaId; // Ritorna l'ID eliminato
+  }
+);
+
+
 /* ----------------- Slice Redux ----------------- */
 
 const budgetSlice = createSlice({
@@ -87,6 +105,11 @@ const budgetSlice = createSlice({
         }
         aggiornaTotali(state)
       })
+      .addCase(eliminaCategoriaAPI.fulfilled, (state, action) => {
+        state.categorie = state.categorie.filter(c => c.id !== action.payload);
+        aggiornaTotali(state);
+      })
+
   }
 })
 
