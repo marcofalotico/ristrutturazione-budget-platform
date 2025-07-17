@@ -6,16 +6,19 @@ import ModaleModificaCategoria from '../components/ModaleModificaCategoria';
 import BarraRicerca from '../components/BarraRicerca';
 
 const ElencoCategorie = () => {
-  const [categorie, setCategorie] = useState([]);
+    // ✅ Stato locale: array di categorie caricate da Supabase
+    const [categorie, setCategorie] = useState([]);
+    // ✅ Stato: flag per caricamento
   const [loading, setLoading] = useState(true);
+    // ✅ Stato: errori nel caricamento
   const [error, setError] = useState('');
+    // ✅ Stato per la modale di modifica
   const [showModale, setShowModale] = useState(false);
   const [categoriaSelezionata, setCategoriaSelezionata] = useState(null);
+    // ✅ Stato per barra di ricerca
   const [filtro, setFiltro] = useState('');
+  // ✅ Stato per messaggi di successo
   const [messaggioSuccesso, setMessaggioSuccesso] = useState('');
-
-  // ✅ Nuovo stato per filtro macro area
-  const [macroAreaAttiva, setMacroAreaAttiva] = useState('Tutte');
 
   // ✅ Carica categorie da Supabase
   const fetchCategorie = async () => {
@@ -38,6 +41,7 @@ const ElencoCategorie = () => {
     fetchCategorie();
   }, []);
 
+  // ✅ Elimina categoria da Supabase
   const handleElimina = async (id) => {
     const conferma = window.confirm("Sei sicuro di voler eliminare questa categoria?");
     if (!conferma) return;
@@ -57,6 +61,7 @@ const ElencoCategorie = () => {
     }
   };
 
+  // ✅ Salva modifica categoria e aggiorna riga corrispondente
   const handleSalvaModifica = (categoriaModificata) => {
     setCategorie(prev =>
       prev.map(cat => (cat.id === categoriaModificata.id ? categoriaModificata : cat))
@@ -71,26 +76,7 @@ const ElencoCategorie = () => {
     setShowModale(true);
   };
 
-  // ✅ Macro aree uniche per i bottoni di filtro
-  const macroAreeUniche = [
-    'Tutte',
-    ...Array.from(new Set(categorie.map(cat => cat.macro_area || 'Altro')))
-  ];
-
-  // ✅ Filtro combinato: testo + macro area attiva
-  const categorieFiltrate = categorie.filter((cat) => {
-    const filtroLower = filtro.toLowerCase();
-    const matchTesto =
-      cat.nome?.toLowerCase().includes(filtroLower) ||
-      cat.macro_area?.toLowerCase().includes(filtroLower) ||
-      cat.note?.toLowerCase().includes(filtroLower);
-
-    const matchMacroArea =
-      macroAreaAttiva === 'Tutte' || (cat.macro_area || 'Altro') === macroAreaAttiva;
-
-    return matchTesto && matchMacroArea;
-  });
-
+// ✅ Spinner durante il caricamento
   if (loading) {
     return (
       <Container className="mt-5 text-center">
@@ -100,27 +86,27 @@ const ElencoCategorie = () => {
     );
   }
 
+  // ✅ Applica filtro alla lista (case-insensitive)
+  const categorieFiltrate = categorie.filter((cat) => {
+    const filtroLower = filtro.toLowerCase();
+    return (
+      cat.nome?.toLowerCase().includes(filtroLower) ||
+      cat.macro_area?.toLowerCase().includes(filtroLower) ||
+      cat.note?.toLowerCase().includes(filtroLower)
+    );
+  });
+
   return (
     <Container className="mt-5">
-      {/* ✅ Bottoni di filtro per macro area */}
-      <div className="mb-3 d-flex flex-wrap gap-2">
-        {macroAreeUniche.map((area) => (
-          <Button
-            key={area}
-            variant={area === macroAreaAttiva ? 'primary' : 'outline-secondary'}
-            size="sm"
-            onClick={() => setMacroAreaAttiva(area)}
-          >
-            {area}
-          </Button>
-        ))}
-      </div>
-
       <h2>Elenco delle Categorie</h2>
 
+      {/* ✅ Messaggio di successo */}
       {messaggioSuccesso && <Alert variant="success">{messaggioSuccesso}</Alert>}
+
+      {/* ✅ Messaggio di errore */}
       {error && <Alert variant="danger">{error}</Alert>}
 
+      {/* ✅ Barra ricerca */}
       <BarraRicerca filtro={filtro} setFiltro={setFiltro} />
 
       <Table striped bordered hover responsive>
@@ -164,12 +150,13 @@ const ElencoCategorie = () => {
         </tbody>
       </Table>
 
+      {/* ✅ Modale visibile solo se categoria selezionata */}
       {categoriaSelezionata && (
         <ModaleModificaCategoria
           show={showModale}
           onHide={() => setShowModale(false)}
           categoria={categoriaSelezionata}
-          onSalva={handleSalvaModifica}
+          onSalva={handleSalvaModifica} // ✅ callback che aggiorna la lista
         />
       )}
     </Container>
