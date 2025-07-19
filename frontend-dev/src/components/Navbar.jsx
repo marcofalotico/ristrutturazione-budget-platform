@@ -2,6 +2,7 @@
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../SupabaseClient';
+import logo from '../assets/planora_logo_square.png';
 
 const MyNavbar = () => {
   const navigate = useNavigate();
@@ -14,7 +15,10 @@ const MyNavbar = () => {
   return (
     <Navbar bg="light" expand="lg" className="mb-4 shadow-sm">
       <Container>
-        <Navbar.Brand as={Link} to="/">🏠 Ristrutturazione</Navbar.Brand>
+        <Navbar.Brand as={Link} to="/" className="d-flex align-items-center gap-2">
+          <img src={logo} alt="Planora Logo" style={{ height: '50px' }} />
+          <span className="fw-bold text-dark">PLANORA</span>
+        </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse>
           <Nav className="me-auto">
