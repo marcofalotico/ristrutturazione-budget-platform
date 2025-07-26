@@ -1,6 +1,8 @@
 import { useSelector } from 'react-redux'
 import { Container, Row, Col, Card, Modal, Button } from 'react-bootstrap'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 import {
   Chart as ChartJS,
@@ -13,17 +15,19 @@ import {
 } from 'chart.js'
 import { Pie, Bar } from 'react-chartjs-2'
 
-// ✅ Registra i componenti di Chart.js
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const Grafici = () => {
   const categorie = useSelector((state) => state.budget.categorie)
 
-  // ✅ Stati per Modals
   const [showPieModal, setShowPieModal] = useState(false)
   const [showBarModal, setShowBarModal] = useState(false)
 
-  // ✅ Pie Chart: aggrego costo_max per macro_area
+  // ✅ Ref ai grafici
+  const pieChartRef = useRef(null)
+  const barChartRef = useRef(null)
+
+  // ✅ Aggregazione per grafico a torta
   const macroAreaMap = {}
   categorie.forEach((c) => {
     macroAreaMap[c.macro_area] = (macroAreaMap[c.macro_area] || 0) + c.costo_max
@@ -50,7 +54,6 @@ const Grafici = () => {
     ]
   }
 
-  // ✅ Bar Chart: confronto preventivo vs effettivo
   const barData = {
     labels: categorie.map(c => c.nome),
     datasets: [
@@ -74,7 +77,29 @@ const Grafici = () => {
         position: 'bottom'
       }
     }
-    // ❌ Nessuna scala Y dinamica qui!
+  }
+
+  // ✅ Funzioni download PNG
+  const downloadChartAsPNG = (chartRef, fileName) => {
+    if (chartRef.current) {
+      const chart = chartRef.current;
+      const base64 = chart.toBase64Image();
+      const link = document.createElement('a');
+      link.href = base64;
+      link.download = fileName;
+      link.click();
+    }
+  }
+
+  // ✅ Funzioni download PDF
+  const downloadChartAsPDF = async (elementId, fileName) => {
+    const element = document.getElementById(elementId);
+    const canvas = await html2canvas(element);
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF();
+    pdf.addImage(imgData, 'PNG', 10, 10, 190, 0);
+    pdf.save(fileName);
   }
 
   return (
@@ -82,7 +107,7 @@ const Grafici = () => {
       <h2 className="text-center mb-4">Analisi Grafica Ristrutturazione</h2>
 
       <Row className="gy-4">
-        {/* ✅ PIE cliccabile */}
+        {/* ✅ PIE chart */}
         <Col md={6}>
           <Card className="shadow-sm p-3">
             <h5 className="text-center">Distribuzione Preventivi per Macro Area</h5>
@@ -95,12 +120,14 @@ const Grafici = () => {
           </Card>
         </Col>
 
-        {/* ✅ BAR cliccabile */}
+        {/* ✅ BAR chart */}
         <Col md={6}>
           <Card className="shadow-sm p-3">
             <h5 className="text-center">Preventivo vs Spesa Effettiva</h5>
-            <div style={{ cursor: 'pointer' }} onClick={() => setShowBarModal(true)}>
-              <Bar data={barData} options={barOptions} />
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: '600px', cursor: 'pointer' }} onClick={() => setShowBarModal(true)}>
+                <Bar data={barData} options={barOptions} />
+              </div>
             </div>
             <p className="text-center small text-muted mt-2">
               Clicca sul grafico per ingrandire
@@ -114,10 +141,18 @@ const Grafici = () => {
         <Modal.Header closeButton>
           <Modal.Title>Grafico Torta Ingrandito</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Pie data={pieData} />
+        <Modal.Body id="grafico-pie-container">
+          <Pie ref={pieChartRef} data={pieData} />
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="d-flex justify-content-between">
+          <div>
+            <Button variant="outline-primary" onClick={() => downloadChartAsPNG(pieChartRef, 'grafico_torta.png')} className="me-2">
+              📥 Scarica PNG
+            </Button>
+            <Button variant="outline-success" onClick={() => downloadChartAsPDF('grafico-pie-container', 'grafico_torta.pdf')}>
+              📄 Scarica PDF
+            </Button>
+          </div>
           <Button variant="secondary" onClick={() => setShowPieModal(false)}>
             Chiudi
           </Button>
@@ -129,10 +164,18 @@ const Grafici = () => {
         <Modal.Header closeButton>
           <Modal.Title>Grafico Barre Ingrandito</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Bar data={barData} options={barOptions} />
+        <Modal.Body id="grafico-bar-container">
+          <Bar ref={barChartRef} data={barData} options={barOptions} />
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="d-flex justify-content-between">
+          <div>
+            <Button variant="outline-primary" onClick={() => downloadChartAsPNG(barChartRef, 'grafico_barre.png')} className="me-2">
+              📥 Scarica PNG
+            </Button>
+            <Button variant="outline-success" onClick={() => downloadChartAsPDF('grafico-bar-container', 'grafico_barre.pdf')}>
+              📄 Scarica PDF
+            </Button>
+          </div>
           <Button variant="secondary" onClick={() => setShowBarModal(false)}>
             Chiudi
           </Button>

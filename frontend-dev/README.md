@@ -1,12 +1,26 @@
-# React + Vite
+# 🗓️ PLANORA – Pianifica ora l'ambiente di domani
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PLANORA è un'applicazione web pensata per aiutare privati e professionisti a gestire in modo semplice il budget di una ristrutturazione.  
+Permette di registrare categorie di spesa, inserire costi preventivati ed effettivi, e visualizzare gli scostamenti in modo chiaro e intuitivo.
 
-Currently, two official plugins are available:
+## 🚀 Funzionalità principali
+- Inserimento categorie e spese per macro-aree
+- Confronto tra preventivo e spesa reale
+- Visualizzazione dello scostamento per categoria e totale
+- Grafici dinamici
+- Gestione multi-utente tramite Login gestito da Supabase
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🧱 Tecnologie utilizzate
+- **Frontend:** [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **UI:** [Bootstrap 5](https://getbootstrap.com/)
+- **Backend-as-a-Service:** [Supabase](https://supabase.com/) (autenticazione + database)
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 📦 Avvio in locale
+```bash
+git clone https://github.com/marcofalotico/ristrutturazione-budget-platform.git
+cd ristrutturazione-budget-platform
+npm install
+npm run dev
+```
+## Licenze e diritti
+© 2025 Marco Falotico. Tutti i diritti riservati.

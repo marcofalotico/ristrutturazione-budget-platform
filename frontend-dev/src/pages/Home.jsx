@@ -35,7 +35,7 @@ const Home = () => {
       className="d-flex flex-column justify-content-start align-items-center pt-5"
       style={{ minHeight: 'calc(100vh - 80px)' }}
     >
-      <h1 className="text-center mb-4">Dashboard Ristrutturazione</h1>
+      <h1 className="text-center mb-4">Dashboard</h1>
 
       <Row className="gy-4 justify-content-center w-100 px-3">
 
@@ -43,7 +43,7 @@ const Home = () => {
         <Col xs={12} md={10} lg={8}>
           <Card className="shadow-sm">
             <Card.Body>
-              <Card.Title className="mb-3 text-center fw-bold">Totali Ristrutturazione</Card.Title>
+              {/* <Card.Title className="mb-3 text-center fw-bold">Totali Ristrutturazione</Card.Title> */}
 
               <Row>
                 <Col md={4} className="text-center mb-3 mb-md-0">
