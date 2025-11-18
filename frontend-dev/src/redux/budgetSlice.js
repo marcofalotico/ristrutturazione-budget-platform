@@ -119,7 +119,7 @@ function aggiornaTotali(state) {
   state.totaleEffettivo = state.categorie.reduce((sum, c) => sum + (c.costo_effettivo || 0), 0)
   state.scostamento = state.totaleEffettivo - state.totaleStimato
 
-  const completate = state.categorie.filter(c => c.costo_effettivo !== null && c.costo_effettivo !== undefined).length
+  const completate = state.categorie.filter(c => typeof c.costo_effettivo === 'number' && c.costo_effettivo > 0).length
   state.completamento = state.categorie.length > 0
     ? Math.round((completate / state.categorie.length) * 100)
     : 0

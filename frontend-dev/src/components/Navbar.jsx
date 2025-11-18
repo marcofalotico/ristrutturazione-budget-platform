@@ -56,7 +56,7 @@ const MyNavbar = () => {
           {/* ✅ Navbar desktop */}
           <Navbar.Collapse className="d-none d-lg-flex justify-content-between">
             <Nav className="me-auto">
-              <Nav.Link as={Link} to="/">Dashboard</Nav.Link>
+              {/* <Nav.Link as={Link} to="/">Dashboard</Nav.Link> */}
               <Nav.Link as={Link} to="/elenco">Elenco</Nav.Link>
               <Nav.Link as={Link} to="/inserisci">Inserisci Preventivo</Nav.Link>
               <Nav.Link as={Link} to="/spesa">Inserisci Spesa</Nav.Link>

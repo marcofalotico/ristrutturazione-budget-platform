@@ -19,15 +19,27 @@ const Home = () => {
   } = useSelector((state) => state.budget)
 
   // ✅ Raggruppa per macro area e calcola scostamento
-  const macroAree = {}
+  const macroAree = {};
   categorie.forEach((cat) => {
-    const area = cat.macro_area || 'Altro'
+    const area = cat.macro_area || 'Altro';
     if (!macroAree[area]) {
-      macroAree[area] = { preventivo: 0, effettivo: 0 }
+      macroAree[area] = { preventivo: 0, effettivo: 0 };
     }
-    macroAree[area].preventivo += cat.costo_max || 0
-    macroAree[area].effettivo += cat.costo_effettivo || 0
-  })
+    macroAree[area].preventivo += cat.costo_max || 0;
+    macroAree[area].effettivo += cat.costo_effettivo || 0;
+  });
+
+  // ✅ Se costo_effettivo è null/undefined/0, consideriamo la categoria "da acquistare"
+  const elementiDaAcquistare = categorie.filter((cat) => {
+    return !cat.costo_effettivo || cat.costo_effettivo === 0;
+  });
+
+  // 💰 Totale previsto dei prodotti ancora da acquistare
+  const totaleDaAcquistare = elementiDaAcquistare.reduce(
+    (sum, cat) => sum + (cat.costo_max || 0),
+    0
+  );
+
 
   return (
     <Container
@@ -99,6 +111,8 @@ const Home = () => {
                         {inBudget
                           ? `sei dentro al budget di € ${Math.abs(scostamentoArea).toLocaleString()}`
                           : `hai sforato di € ${scostamentoArea.toLocaleString()}`}
+                          <br />
+                          {"Su un totale di € "}{valori.preventivo}
                       </div>
                     </Col>
                   )
@@ -108,16 +122,53 @@ const Home = () => {
           </Card>
         </Col>
 
-        {/* ✅ Card 3: Completamento */}
+        {/* ✅ Card 3: Completamento + elementi da acquistare */}
         <Col xs={12} md={10} lg={8}>
           <Card className="shadow-sm text-center">
             <Card.Body>
+              {/* Titolo della sezione completamento */}
               <Card.Title className="text-secondary mb-2">Completamento</Card.Title>
+
+              {/* ✅ Barra di avanzamento generale */}
+              {/* In React il valore "now" viene da Redux: quando lo store cambia,
+                  il componente viene ri-renderizzato mostrando la percentuale aggiornata */}
               <ProgressBar
                 now={completamento}
                 label={`${completamento}%`}
                 variant={completamento < 100 ? 'info' : 'success'}
               />
+
+              <hr className="my-4" />
+
+              {elementiDaAcquistare.length > 0 ? (
+                <>
+                  {/* Sottotitolo se ci sono elementi da acquistare */}
+                  <h6 className="text-secondary mb-3">
+                    Elementi ancora da acquistare ({elementiDaAcquistare.length})
+                  </h6>
+
+                  {/* Lista senza puntini, allineata a sinistra per leggibilità */}
+                  <ul className="list-unstyled mb-0 text-start">
+                    {elementiDaAcquistare.map((cat) => (
+                      <li key={cat.id} className="mb-1">
+                        {/* In React è importante usare una key stabile (qui l'id del record) */}
+                        • <strong>{cat.nome}</strong>
+                        {cat.macro_area && ` – ${cat.macro_area}`}
+                        {typeof cat.costo_max === 'number' &&
+                          ` (budget previsto: € ${cat.costo_max.toLocaleString()})`}
+                      </li>
+                    ))}
+                    <p className="text-danger fw-bold mb-3">
+                      Totale rimanente: € {totaleDaAcquistare.toLocaleString()}
+                    </p>
+                  </ul>
+                </>
+              ) : (
+                // Messaggio positivo quando tutte le categorie hanno un costo effettivo > 0
+                <p className="mt-3 mb-0 text-success">
+                  Hai inserito un costo effettivo per tutte le categorie 🎉
+                </p>
+              )}
             </Card.Body>
           </Card>
         </Col>
