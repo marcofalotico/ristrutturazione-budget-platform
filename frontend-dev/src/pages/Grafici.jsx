@@ -1,6 +1,7 @@
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Container, Row, Col, Card, Modal, Button } from 'react-bootstrap';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect  } from 'react';
+import { fetchCategorieAPI } from '../redux/budgetSlice';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -10,24 +11,45 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   Tooltip,
   Legend
 } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+// Registriamo TUTTO ciò che usiamo (inclusa scala log)
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  LogarithmicScale,
+  Tooltip,
+  Legend
+);
 
 const Grafici = () => {
+  const dispatch = useDispatch();
   const categorie = useSelector((state) => state.budget.categorie);
+
+  // 👇 Se entro qui con lo store vuoto (es. dopo F5), ricarico dal DB
+  useEffect(() => {
+    if (categorie.length === 0) {
+      dispatch(fetchCategorieAPI());
+    }
+  }, [categorie.length, dispatch]);
 
   const [showPieModal, setShowPieModal] = useState(false);
   const [showBarModal, setShowBarModal] = useState(false);
 
-  // ✅ Tipo di grafico a torta selezionato
+  // ✅ Tipo di grafico a torta selezionato ("preventivo" | "effettivo")
   const [tipoPie, setTipoPie] = useState('preventivo');
 
   // ✅ Modalità per il bar chart: top N o tutte
   const [mostraTop, setMostraTop] = useState(true);
+
+  // ✅ Tipo di scala Y per il bar chart ("linear" | "log")
+  const [scalaY, setScalaY] = useState('log');
 
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -47,6 +69,16 @@ const Grafici = () => {
     macroPrevMap[key] = (macroPrevMap[key] || 0) + preventivo;
     macroEffMap[key] = (macroEffMap[key] || 0) + effettivo;
   });
+
+  // ✅ Totali globali (usati per percentuali e riepilogo)
+  const totalePreventivo = Object.values(macroPrevMap).reduce(
+    (sum, v) => sum + v,
+    0
+  );
+  const totaleEffettivo = Object.values(macroEffMap).reduce(
+    (sum, v) => sum + v,
+    0
+  );
 
   const generatePalette = (count) => {
     if (count <= 0) return [];
@@ -87,6 +119,32 @@ const Grafici = () => {
 
   const hasPieData = pieData.labels.length > 0;
 
+  // ✅ Opzioni del pie: tooltip con preventivo+effettivo+percentuali
+  const pieOptions = {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const label = ctx.label;
+            const prev = macroPrevMap[label] || 0;
+            const eff = macroEffMap[label] || 0;
+
+            const percPrev =
+              totalePreventivo > 0 ? ((prev / totalePreventivo) * 100).toFixed(1) : 0;
+            const percEff =
+              totaleEffettivo > 0 ? ((eff / totaleEffettivo) * 100).toFixed(1) : 0;
+
+            // Ritorniamo più righe nel tooltip
+            return [
+              `Preventivo: € ${prev.toLocaleString()} (${percPrev}%)`,
+              `Effettivo:  € ${eff.toLocaleString()} (${percEff}%)`
+            ];
+          }
+        }
+      }
+    }
+  };
+
   // ============================================================
   // 2) Dati per BAR chart: Top 15 vs tutte le categorie
   // ============================================================
@@ -108,24 +166,43 @@ const Grafici = () => {
   // 🔹 Helper per accorciare le label sull'asse X
   const shorten = (str) => (str.length > 20 ? str.slice(0, 17) + '…' : str);
 
-  const valoriPreventivo = categoriePerGrafico.map((c) =>
+  // ✅ Valore minimo visibile sulla scala log
+  const MIN_LOG_VALUE = 1;
+
+  // ✅ Converter per rendere i valori compatibili con scala logaritmica
+  const toLogSafeValue = (num) => {
+    const v = typeof num === 'number' ? num : 0;
+    return v > 0 ? v : MIN_LOG_VALUE;
+  };
+
+  // 🔹 Valori "reali" (usati per tooltip e per scala lineare)
+  const valoriPreventivoRaw = categoriePerGrafico.map((c) =>
     typeof c.costo_max === 'number' ? c.costo_max : 0
   );
-  const valoriEffettivo = categoriePerGrafico.map((c) =>
+  const valoriEffettivoRaw = categoriePerGrafico.map((c) =>
     typeof c.costo_effettivo === 'number' ? c.costo_effettivo : 0
   );
+
+  // 🔹 Valori effettivamente mandati al grafico (dipendono dalla scala)
+  const valoriPreventivoChart =
+    scalaY === 'log'
+      ? valoriPreventivoRaw.map(toLogSafeValue)
+      : valoriPreventivoRaw;
+
+  const valoriEffettivoChart =
+    scalaY === 'log' ? valoriEffettivoRaw.map(toLogSafeValue) : valoriEffettivoRaw;
 
   const barData = {
     labels: categoriePerGrafico.map((c) => shorten(c.nome)),
     datasets: [
       {
         label: 'Preventivo (€)',
-        data: valoriPreventivo,
+        data: valoriPreventivoChart,
         backgroundColor: 'rgba(0, 123, 255, 0.6)'
       },
       {
         label: 'Spesa Effettiva (€)',
-        data: valoriEffettivo,
+        data: valoriEffettivoChart,
         backgroundColor: 'rgba(40, 167, 69, 0.6)'
       }
     ]
@@ -134,21 +211,20 @@ const Grafici = () => {
   const barOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'bottom'
-      },
+      legend: { position: 'bottom' },
       tooltip: {
         callbacks: {
-          // Titolo: nome completo della categoria
           title: (items) => {
             const index = items[0].dataIndex;
             return categoriePerGrafico[index].nome;
           },
-          // Label: usa il valore "vero" formattato in €
+          // Nel tooltip mostriamo sempre i valori REALI (non log-safe)
           label: (ctx) => {
             const index = ctx.dataIndex;
             const isPrev = ctx.datasetIndex === 0;
-            const valore = isPrev ? valoriPreventivo[index] : valoriEffettivo[index];
+            const valore = isPrev
+              ? valoriPreventivoRaw[index]
+              : valoriEffettivoRaw[index];
             return `${ctx.dataset.label}: € ${valore.toLocaleString()}`;
           }
         }
@@ -156,7 +232,8 @@ const Grafici = () => {
     },
     scales: {
       y: {
-        beginAtZero: true,
+        type: scalaY === 'log' ? 'logarithmic' : 'linear',
+        min: scalaY === 'log' ? MIN_LOG_VALUE : 0,
         ticks: {
           callback: (value) => `€ ${value.toLocaleString()}`
         }
@@ -193,6 +270,14 @@ const Grafici = () => {
     pdf.save(fileName);
   };
 
+  // ============================================================
+  // 4) RENDER
+  // ============================================================
+  // Lista riepilogativa per il pie (una riga per macro area)
+  const macroAreeTotali = Array.from(
+    new Set([...Object.keys(macroPrevMap), ...Object.keys(macroEffMap)])
+  );
+
   return (
     <Container className="mt-5">
       <h2 className="text-center mb-4">Analisi Grafica Ristrutturazione</h2>
@@ -203,6 +288,7 @@ const Grafici = () => {
           <Card className="shadow-sm p-3">
             <h5 className="text-center mb-3">{pieTitle}</h5>
 
+            {/* Toggle PREVENTIVO / EFFETTIVO */}
             <div className="d-flex justify-content-center mb-3">
               <Button
                 size="sm"
@@ -226,7 +312,7 @@ const Grafici = () => {
               onClick={() => hasPieData && setShowPieModal(true)}
             >
               {hasPieData ? (
-                <Pie data={pieData} />
+                <Pie data={pieData} options={pieOptions} />
               ) : (
                 <p className="text-center text-muted my-5">
                   Nessuna macro area con{' '}
@@ -243,6 +329,50 @@ const Grafici = () => {
                 ? 'Clicca sul grafico per ingrandire'
                 : 'Inserisci almeno un valore per vedere il grafico'}
             </p>
+
+            {/* Riepilogo per macro area */}
+            {macroAreeTotali.length > 0 && (
+              <div className="mt-3">
+                <h6 className="fw-bold">Dettaglio per Macro Area</h6>
+                <ul className="small mb-2" style={{ paddingLeft: '1.2rem' }}>
+                  {macroAreeTotali.map((area) => {
+                    const prev = macroPrevMap[area] || 0;
+                    const eff = macroEffMap[area] || 0;
+                    const percPrev =
+                      totalePreventivo > 0
+                        ? ((prev / totalePreventivo) * 100).toFixed(1)
+                        : 0;
+                    const percEff =
+                      totaleEffettivo > 0
+                        ? ((eff / totaleEffettivo) * 100).toFixed(1)
+                        : 0;
+
+                    return (
+                      <li key={area}>
+                        <strong>{area}</strong> —{' '}
+                        <span>
+                          Preventivo: € {prev.toLocaleString()} ({percPrev}%)
+                        </span>
+                        {' | '}
+                        <span>
+                          Effettivo: € {eff.toLocaleString()} ({percEff}%)
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {/* Totali globali */}
+                <p className="small mb-0">
+                  <strong>Totale preventivo:</strong> €{' '}
+                  {totalePreventivo.toLocaleString()}
+                </p>
+                <p className="small mb-0">
+                  <strong>Totale effettivo:</strong> €{' '}
+                  {totaleEffettivo.toLocaleString()}
+                </p>
+              </div>
+            )}
           </Card>
         </Col>
 
@@ -256,7 +386,7 @@ const Grafici = () => {
             </div>
 
             {/* Toggle Top 15 / Tutte */}
-            <div className="d-flex justify-content-center mb-3">
+            <div className="d-flex justify-content-center mb-2">
               <Button
                 size="sm"
                 variant={mostraTop ? 'primary' : 'outline-primary'}
@@ -271,6 +401,25 @@ const Grafici = () => {
                 onClick={() => setMostraTop(false)}
               >
                 Mostra tutte
+              </Button>
+            </div>
+
+            {/* Toggle scala lineare / logaritmica */}
+            <div className="d-flex justify-content-center mb-3">
+              <Button
+                size="sm"
+                variant={scalaY === 'linear' ? 'primary' : 'outline-primary'}
+                className="me-2"
+                onClick={() => setScalaY('linear')}
+              >
+                Scala lineare
+              </Button>
+              <Button
+                size="sm"
+                variant={scalaY === 'log' ? 'primary' : 'outline-primary'}
+                onClick={() => setScalaY('log')}
+              >
+                Scala logaritmica
               </Button>
             </div>
 
@@ -305,7 +454,7 @@ const Grafici = () => {
         </Modal.Header>
         <Modal.Body id="grafico-pie-container">
           {hasPieData ? (
-            <Pie ref={pieChartRef} data={pieData} />
+            <Pie ref={pieChartRef} data={pieData} options={pieOptions} />
           ) : (
             <p className="text-center text-muted my-5">
               Nessuna macro area con{' '}

@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux'
-import { useState } from 'react'
+import { useState, useEffect  } from 'react'
+import { fetchCategorieAPI } from '../redux/budgetSlice';
 
 // ✅ IMPORT CORRETTO!
 import { modificaCategoriaAPI } from '../redux/budgetSlice'
@@ -10,6 +11,13 @@ import Select from 'react-select'
 const InserisciSpesa = () => {
   const dispatch = useDispatch()
   const categorie = useSelector(state => state.budget.categorie)
+
+  // 👇 Se entro qui con lo store vuoto (es. dopo F5), ricarico dal DB
+  useEffect(() => {
+    if (categorie.length === 0) {
+      dispatch(fetchCategorieAPI());
+    }
+  }, [categorie.length, dispatch]);
 
   const [formData, setFormData] = useState({ categoria: '', effettivo: '' })
   const [successo, setSuccesso] = useState(false)
