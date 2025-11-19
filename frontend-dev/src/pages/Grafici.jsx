@@ -23,14 +23,17 @@ const Grafici = () => {
   const [showPieModal, setShowPieModal] = useState(false);
   const [showBarModal, setShowBarModal] = useState(false);
 
-  // ✅ NUOVO: tipo di grafico a torta selezionato ("preventivo" | "effettivo")
+  // ✅ Tipo di grafico a torta selezionato
   const [tipoPie, setTipoPie] = useState('preventivo');
+
+  // ✅ Modalità per il bar chart: top N o tutte
+  const [mostraTop, setMostraTop] = useState(true);
 
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
 
   // ============================================================
-  // 1) Aggregazione per macro area: preventivo ed effettivo separati
+  // 1) Aggregazione pie: preventivo / effettivo per macro area
   // ============================================================
   const macroPrevMap = {};
   const macroEffMap = {};
@@ -45,7 +48,6 @@ const Grafici = () => {
     macroEffMap[key] = (macroEffMap[key] || 0) + effettivo;
   });
 
-  // ✅ Generatore di palette dinamica (tanti colori ben distanziati)
   const generatePalette = (count) => {
     if (count <= 0) return [];
     return Array.from({ length: count }, (_, i) => {
@@ -54,7 +56,6 @@ const Grafici = () => {
     });
   };
 
-  // ✅ Costruisce i dati per il pie, filtrando le macro aree con valore 0
   const buildPieData = (map, datasetLabel) => {
     const entries = Object.entries(map).filter(([, value]) => value > 0);
 
@@ -74,7 +75,6 @@ const Grafici = () => {
     };
   };
 
-  // ✅ Scegliamo quali dati usare in base al tipo di grafico selezionato
   const pieData =
     tipoPie === 'preventivo'
       ? buildPieData(macroPrevMap, 'Preventivo per Macro Area (€)')
@@ -88,23 +88,44 @@ const Grafici = () => {
   const hasPieData = pieData.labels.length > 0;
 
   // ============================================================
-  // 2) Dati per grafico a barre (per categoria)
+  // 2) Dati per BAR chart: Top 15 vs tutte le categorie
   // ============================================================
+
+  // 🔹 Ordiniamo le categorie per valore massimo fra preventivo/effettivo
+  const categorieOrdinate = [...categorie].sort((a, b) => {
+    const maxA = Math.max(a.costo_max || 0, a.costo_effettivo || 0);
+    const maxB = Math.max(b.costo_max || 0, b.costo_effettivo || 0);
+    return maxB - maxA;
+  });
+
+  const TOP_N = 15;
+
+  // 🔹 Scegliamo il sottoinsieme da mostrare nel grafico
+  const categoriePerGrafico = mostraTop
+    ? categorieOrdinate.slice(0, TOP_N)
+    : categorieOrdinate;
+
+  // 🔹 Helper per accorciare le label sull'asse X
+  const shorten = (str) => (str.length > 20 ? str.slice(0, 17) + '…' : str);
+
+  const valoriPreventivo = categoriePerGrafico.map((c) =>
+    typeof c.costo_max === 'number' ? c.costo_max : 0
+  );
+  const valoriEffettivo = categoriePerGrafico.map((c) =>
+    typeof c.costo_effettivo === 'number' ? c.costo_effettivo : 0
+  );
+
   const barData = {
-    labels: categorie.map((c) => c.nome),
+    labels: categoriePerGrafico.map((c) => shorten(c.nome)),
     datasets: [
       {
         label: 'Preventivo (€)',
-        data: categorie.map((c) =>
-          typeof c.costo_max === 'number' ? c.costo_max : 0
-        ),
+        data: valoriPreventivo,
         backgroundColor: 'rgba(0, 123, 255, 0.6)'
       },
       {
         label: 'Spesa Effettiva (€)',
-        data: categorie.map((c) =>
-          typeof c.costo_effettivo === 'number' ? c.costo_effettivo : 0
-        ),
+        data: valoriEffettivo,
         backgroundColor: 'rgba(40, 167, 69, 0.6)'
       }
     ]
@@ -115,12 +136,42 @@ const Grafici = () => {
     plugins: {
       legend: {
         position: 'bottom'
+      },
+      tooltip: {
+        callbacks: {
+          // Titolo: nome completo della categoria
+          title: (items) => {
+            const index = items[0].dataIndex;
+            return categoriePerGrafico[index].nome;
+          },
+          // Label: usa il valore "vero" formattato in €
+          label: (ctx) => {
+            const index = ctx.dataIndex;
+            const isPrev = ctx.datasetIndex === 0;
+            const valore = isPrev ? valoriPreventivo[index] : valoriEffettivo[index];
+            return `${ctx.dataset.label}: € ${valore.toLocaleString()}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => `€ ${value.toLocaleString()}`
+        }
+      },
+      x: {
+        ticks: {
+          maxRotation: 60,
+          minRotation: 45
+        }
       }
     }
   };
 
   // ============================================================
-  // 3) Download PNG
+  // 3) Download PNG / PDF
   // ============================================================
   const downloadChartAsPNG = (chartRef, fileName) => {
     if (!chartRef.current) return;
@@ -132,9 +183,6 @@ const Grafici = () => {
     link.click();
   };
 
-  // ============================================================
-  // 4) Download PDF
-  // ============================================================
   const downloadChartAsPDF = async (elementId, fileName) => {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -155,7 +203,6 @@ const Grafici = () => {
           <Card className="shadow-sm p-3">
             <h5 className="text-center mb-3">{pieTitle}</h5>
 
-            {/* 🔀 Toggle Preventivo / Effettivo */}
             <div className="d-flex justify-content-center mb-3">
               <Button
                 size="sm"
@@ -182,7 +229,8 @@ const Grafici = () => {
                 <Pie data={pieData} />
               ) : (
                 <p className="text-center text-muted my-5">
-                  Nessuna macro area con {tipoPie === 'preventivo'
+                  Nessuna macro area con{' '}
+                  {tipoPie === 'preventivo'
                     ? 'costi preventivati'
                     : 'spese effettive'}
                   .
@@ -201,7 +249,31 @@ const Grafici = () => {
         {/* ✅ BAR chart */}
         <Col md={6}>
           <Card className="shadow-sm p-3">
-            <h5 className="text-center">Preventivo vs Spesa Effettiva</h5>
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h5 className="text-center mb-0 flex-grow-1">
+                Preventivo vs Spesa Effettiva
+              </h5>
+            </div>
+
+            {/* Toggle Top 15 / Tutte */}
+            <div className="d-flex justify-content-center mb-3">
+              <Button
+                size="sm"
+                variant={mostraTop ? 'primary' : 'outline-primary'}
+                className="me-2"
+                onClick={() => setMostraTop(true)}
+              >
+                Top {TOP_N}
+              </Button>
+              <Button
+                size="sm"
+                variant={!mostraTop ? 'primary' : 'outline-primary'}
+                onClick={() => setMostraTop(false)}
+              >
+                Mostra tutte
+              </Button>
+            </div>
+
             <div style={{ overflowX: 'auto' }}>
               <div
                 style={{ minWidth: '600px', cursor: 'pointer' }}
@@ -236,7 +308,8 @@ const Grafici = () => {
             <Pie ref={pieChartRef} data={pieData} />
           ) : (
             <p className="text-center text-muted my-5">
-              Nessuna macro area con {tipoPie === 'preventivo'
+              Nessuna macro area con{' '}
+              {tipoPie === 'preventivo'
                 ? 'costi preventivati'
                 : 'spese effettive'}
               .
